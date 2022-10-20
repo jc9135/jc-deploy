@@ -2,7 +2,7 @@
 
 echo "开始部署..."
 
-echo "git pull"
+echo "开始拉取代码"
 git pull 
 
-echo "部署完成!"
+echo "代码拉取完成!"

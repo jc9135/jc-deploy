@@ -1,10 +1,14 @@
 {
   "name": "jc-deploy",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "ci cd serve",
   "main": "index.js",
+  "keyword": "CI CD server",
   "scripts": {
     "dev": "nodemon ./server/index.js"
+  },
+  "bin": {
+    "jcdeploy": "./bin/jcdeploy.js"
   },
   "keywords": [],
   "author": "",

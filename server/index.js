@@ -16,17 +16,7 @@ const argInfo = JSON.parse(arg)
 
 app.use(bodyParser()) // 处理 post 请求参数
 
-// 开启socket服务
-const socketList = []
-const server = require('http').Server(app.callback())
-const socketIo = require('socket.io')(server)
-socketIo.on('connection', (socket) => {
-  socketList.push(socket)
-  console.log('a user connected')
-})
-
 app.keys = ['some secret hurr']
-
 const CONFIG = {
   key: 'koa:sess' /** (string) cookie key (default is koa:sess) */,
   /** (number || 'session') maxAge in ms (default is 1 days) */
@@ -39,6 +29,15 @@ const CONFIG = {
   rolling: false /** (boolean) Force a session identifier cookie to be set on every response. The expiration is reset to the original maxAge, resetting the expiration countdown. (default is false) */,
   renew: false /** (boolean) renew session when session is nearly expired, so we can always keep user logged in. (default is false)*/
 }
+
+// 开启socket服务
+const socketList = []
+const server = require('http').Server(app.callback())
+const socketIo = require('socket.io')(server)
+socketIo.on('connection', (socket) => {
+  socketList.push(socket)
+  console.log('a user connected')
+})
 
 app.use(session(CONFIG, app))
 
@@ -75,15 +74,38 @@ router.post('/deploy', async (ctx) => {
     }
     return
   }
-  const res = await runCmd(socketIo)
-  ctx.body = {
-    code: 0,
-    msg: res
+  let execFunc = () => {
+    return new Promise((resolve, reject) => {
+      try {
+        runCmd(
+          'sh',
+          ['./deploy-master.sh'],
+          function (text) {
+            resolve(text)
+          },
+          socketIo
+        )
+      } catch (e) {
+        reject(e)
+      }
+    })
+  }
+  try {
+    let res = await execFunc()
+    ctx.body = {
+      code: 0,
+      msg: res
+    }
+  } catch (error) {
+    ctx.body = {
+      code: -1,
+      msg: error.message
+    }
   }
 })
 
 app.use(router.routes()).use(router.allowedMethods())
 app.use(new KoaStatic(path.resolve(__dirname, '../frontend')))
-app.listen(argInfo.port, () =>
+server.listen(argInfo.port, () =>
   console.log(`serve is listening in ${argInfo.port}`)
 )

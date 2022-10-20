@@ -1,29 +1,35 @@
-function runCmd(socketIo) {
-  return new Promise((reslove, reject) => {
-    const { spawn } = require('child_process')
-    const child = spawn('sh', ['deploy-master.sh'])
+const logger = require('./logger')
 
-    let msg = ''
-    child.stdout.on('data', (data) => {
-      // 在此处收集shell执行的log
-      console.log(`stdout:${data}`)
-      socketIo.emit('deploy-log', `${data}`)
-      msg += data
-    })
+function runCmd(cmd, args, callback, socketIo) {
+  const { spawn } = require('child_process')
+  const child = spawn(cmd, args)
 
-    child.stdout.on('end', (data) => {
-      reslove(msg)
-    })
+  let resp = '当前执行路径：' + process.cwd() + '\n'
+  logger.info(resp)
+  socketIo && socketIo.emit('deploy-log', `${resp}`)
+  child.stdout.on('data', (data) => {
+    // 在此处收集shell执行的log
+    let info = data.toString()
+    info = `${new Date().toLocaleString()}: ${info}`
+    resp += info
+    logger.info(info)
+    socketIo && socketIo.emit('deploy-log', `${info}`)
+  })
 
-    child.stderr.on('data', (data) => {
-      console.log(`stderr:${data}`)
-      socketIo.emit('deploy-log', `${data}`)
-      msg += data
-    })
+  child.stdout.on('end', (data) => {
+    callback(resp)
+  })
 
-    child.stderr.on('end', (data) => {
-      reject(msg)
-    })
+  child.stderr.on('data', (data) => {
+    let info = data.toString()
+    info = `${new Date().toLocaleString()}: ${info}`
+    resp += info
+    logger.info(info)
+    socketIo && socketIo.emit('deploy-log', `${info}`)
+  })
+
+  child.stderr.on('end', (data) => {
+    callback(resp)
   })
 }
 
